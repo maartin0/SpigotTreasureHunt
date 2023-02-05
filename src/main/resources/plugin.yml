@@ -1,0 +1,17 @@
+name: TreasureHunter
+version: '${project.version}'
+main: me.maartin0.treasurehunt.Main
+api-version: 1.19
+load: POSTWORLD
+authors: [ maartin0 ]
+
+commands:
+  hunt:
+    usage: "Usage: /<command> [create|delete|scores|mark|confirm|recall] <name?>"
+    aliases:
+      - treasure
+      - t
+permissions:
+  treasurehunt.manage:
+    default: op
+    description: "Generic manage command"
