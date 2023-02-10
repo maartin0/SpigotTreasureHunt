@@ -1,8 +1,6 @@
 package me.maartin0.treasurehunt.game;
 
-import me.maartin0.treasurehunt.commands.ManageCommand;
 import me.maartin0.treasurehunt.util.Data;
-import me.maartin0.treasurehunt.util.Logger;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
@@ -35,7 +33,12 @@ public class TreasureHunt {
             treasureSection.getKeys(false).forEach(k2 -> {
                 Location location = deserializeLocation(k2);
                 Block block = Objects.requireNonNull(Objects.requireNonNull(location).getWorld()).getBlockAt(location);
-                if (ManageCommand.validBlock(block)) new Chest(hunt, block);
+                if (block.getType() == Material.PLAYER_HEAD) new Chest(hunt, block);
+                else {
+                    try {
+                        hunt.deleteItem(block.getLocation());
+                    } catch (IOException | InvalidConfigurationException ignored) {}
+                }
             });
         });
     }
@@ -118,11 +121,10 @@ public class TreasureHunt {
     public static Set<String> getNames() {
         return data.getKeys(false);
     }
-    public synchronized void setItem(@NotNull Location location, @NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException, IllegalArgumentException {
-        if (itemStack.hasItemMeta()) throw new IllegalArgumentException("Item has meta!");
+    public synchronized void setItem(@NotNull Location location, @NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException {
         ConfigurationSection treasureSection = section.getConfigurationSection("treasure");
         if (treasureSection == null) treasureSection = section.createSection("treasure");
-        treasureSection.set(serializeLocation(location), itemStack.serialize());
+        treasureSection.set(serializeLocation(location), itemStack);
         data.reload();
     }
     public synchronized void deleteItem(@NotNull Location location) throws IOException, InvalidConfigurationException {
@@ -134,9 +136,8 @@ public class TreasureHunt {
     public ItemStack getItem(@NotNull Location location) {
         ConfigurationSection treasureSection = section.getConfigurationSection("treasure");
         if (treasureSection == null) return null;
-        Map<String, Object> result = (Map<String, Object>) treasureSection.get(serializeLocation(location));
-        if (result == null) return null;
-        ItemStack item = ItemStack.deserialize(result);
+        ItemStack item = treasureSection.getItemStack(serializeLocation(location));
+        if (item == null) return null;
         ItemMeta meta = item.getItemMeta();
         if (meta == null) meta = Bukkit.getItemFactory().getItemMeta(item.getType());
         assert meta != null;

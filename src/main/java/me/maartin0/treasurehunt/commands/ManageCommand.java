@@ -15,6 +15,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -122,7 +123,8 @@ public class ManageCommand extends Command implements Listener {
         return !type.isAir()
                 && type.isSolid()
                 && type.isInteractable()
-                && block.getState() instanceof InventoryHolder;
+                && block.getState() instanceof InventoryHolder
+                && !(((InventoryHolder) block.getState()).getInventory() instanceof DoubleChestInventory);
     }
     static Block getTargetBlock(Player player) {
         return player.getTargetBlock(Set.of(Material.AIR, Material.WATER, Material.LAVA), 4);

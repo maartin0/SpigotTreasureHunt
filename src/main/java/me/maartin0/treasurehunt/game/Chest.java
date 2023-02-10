@@ -12,26 +12,15 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.profile.PlayerProfile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.UUID;
 
 public class Chest extends Interactable {
-    private final static URL skinURL;
     private final static String texture = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTM1YzE2NTUxYWYzOTI4MWQ4MzA3ODAwZjg1NGMxOGRiNTg3NDdhMWNiYjAxMTYyODY1OGZjYzI1NWExM2M3YyJ9fX0=";
-    static {
-        try {
-            skinURL = new URL("https://textures.minecraft.net/texture/535c16551af39281d8307800f854c18db58747a1cbb011628658fcc255a13c7c");
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private static GameProfile profile;
     public Chest(@NotNull TreasureHunt hunt, @NotNull Block block) {
@@ -69,7 +58,7 @@ public class Chest extends Interactable {
 
         // Send message to player
         Logger.sendPlayerMessage(player,
-                ChatColor.GREEN + "Congratulations, you found a piece of "
+                "Congratulations, you found a piece of "
                         + ChatColor.GOLD + ChatColor.MAGIC + "#"
                         + ChatColor.RESET + ChatColor.GOLD + "treasure"
                         + ChatColor.MAGIC + "#"
@@ -88,7 +77,7 @@ public class Chest extends Interactable {
         profileField.set(skull, profile);
         skull.update();
     }
-    private void setItem(@NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException, IllegalArgumentException {
+    private void setItem(@NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException {
         hunt.setItem(block.getLocation(), itemStack);
     }
     @Nullable
@@ -122,9 +111,6 @@ public class Chest extends Interactable {
         // Store item in chest NBT
         try {
             setItem(item);
-        } catch (IllegalArgumentException e) {
-            interactables.remove(this);
-            return false;
         } catch (IOException | InvalidConfigurationException e) {
             Logger.logWarning("An error occurred while storing item data:");
             e.printStackTrace();

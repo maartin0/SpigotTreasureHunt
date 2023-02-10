@@ -6,7 +6,6 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -17,7 +16,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -52,20 +50,12 @@ public abstract class Interactable {
     protected Interactable(@NotNull TreasureHunt hunt, @NotNull Block block) {
         this.hunt = hunt;
         this.block = block;
-        if (block.isEmpty() || block.isLiquid()) {
-            try {
-                hunt.deleteItem(block.getLocation());
-            } catch (IOException | InvalidConfigurationException ignored) {}
-        } else {
-            Location location = block.getLocation();
-            if (interactables.stream().noneMatch(i -> i.block.getLocation().equals(location)))
-                interactables.add(this);
-        }
+        Location location = block.getLocation();
+        if (interactables.stream().noneMatch(i -> i.block.getLocation().equals(location)))
+            interactables.add(this);
     }
     private static void playDing(Player player, float pitch, long delay) {
-        Bukkit.getScheduler().scheduleSyncDelayedTask(Main.plugin, () -> {
-            player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, SoundCategory.BLOCKS, 1F, pitch);
-        }, delay);
+        Bukkit.getScheduler().scheduleSyncDelayedTask(Main.plugin, () -> player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, SoundCategory.BLOCKS, 1F, pitch), delay);
     }
     protected static void playDing(Player player) {
         playDing(player, 1F, 0L);
