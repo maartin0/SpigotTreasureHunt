@@ -118,7 +118,8 @@ public class TreasureHunt {
     public static Set<String> getNames() {
         return data.getKeys(false);
     }
-    public synchronized void setItem(@NotNull Location location, @NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException {
+    public synchronized void setItem(@NotNull Location location, @NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException, IllegalArgumentException {
+        if (itemStack.hasItemMeta()) throw new IllegalArgumentException("Item has meta!");
         ConfigurationSection treasureSection = section.getConfigurationSection("treasure");
         if (treasureSection == null) treasureSection = section.createSection("treasure");
         treasureSection.set(serializeLocation(location), itemStack.serialize());
@@ -140,6 +141,7 @@ public class TreasureHunt {
         if (meta == null) meta = Bukkit.getItemFactory().getItemMeta(item.getType());
         assert meta != null;
         meta.setLore(Collections.singletonList(itemLore));
+        meta.setCustomModelData(5);
         item.setItemMeta(meta);
         return item;
     }
@@ -148,7 +150,7 @@ public class TreasureHunt {
         ItemMeta itemMeta = itemStack.getItemMeta();
         if (itemMeta == null) return false;
         List<String> lore = itemMeta.getLore();
-        return lore != null && lore.size() == 1 && lore.get(0).equalsIgnoreCase(itemLore);
+        return lore != null && lore.size() == 1 && lore.get(0).equalsIgnoreCase(itemLore) && itemMeta.hasCustomModelData() && itemMeta.getCustomModelData() == 5;
     }
     @NotNull
     protected ConfigurationSection getScoresSection() {

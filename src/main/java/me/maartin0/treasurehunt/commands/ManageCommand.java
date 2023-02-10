@@ -4,7 +4,9 @@ import me.maartin0.treasurehunt.game.Chest;
 import me.maartin0.treasurehunt.game.TreasureHunt;
 import me.maartin0.treasurehunt.util.Command;
 import me.maartin0.treasurehunt.util.Logger;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -14,7 +16,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -137,7 +138,7 @@ public class ManageCommand extends Command implements Listener {
         Block block = getTargetBlock(player);
         if (!validBlock(block) || hunt.vault.block.getLocation().equals(block.getLocation())) Logger.sendPlayerMessage(sender, "Invalid inventory");
         else if (new Chest(hunt, block).mark()) Logger.sendPlayerMessage(sender, "Success");
-        else Logger.sendPlayerMessage(player, "Invalid or empty inventory");
+        else Logger.sendPlayerMessage(player, "Invalid inventory or item");
     }
 
     void confirm(@NotNull CommandSender sender) {

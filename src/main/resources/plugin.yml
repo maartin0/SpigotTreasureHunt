@@ -7,7 +7,7 @@ authors: [ maartin0 ]
 
 commands:
   hunt:
-    usage: "Usage: /<command> [create|delete|scores|mark|confirm|recall] <name?>"
+    usage: "Usage: /<command> [create|delete|scores|mark|confirm] <name?>"
     aliases:
       - treasure
       - t

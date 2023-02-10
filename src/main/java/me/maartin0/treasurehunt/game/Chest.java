@@ -1,12 +1,13 @@
 package me.maartin0.treasurehunt.game;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import me.maartin0.treasurehunt.util.Logger;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Skull;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -16,15 +17,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.UUID;
 
 public class Chest extends Interactable {
     private final static URL skinURL;
-
+    private final static String texture = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTM1YzE2NTUxYWYzOTI4MWQ4MzA3ODAwZjg1NGMxOGRiNTg3NDdhMWNiYjAxMTYyODY1OGZjYzI1NWExM2M3YyJ9fX0=";
     static {
         try {
             skinURL = new URL("https://textures.minecraft.net/texture/535c16551af39281d8307800f854c18db58747a1cbb011628658fcc255a13c7c");
@@ -33,7 +33,7 @@ public class Chest extends Interactable {
         }
     }
 
-    private static PlayerProfile profile;
+    private static GameProfile profile;
     public Chest(@NotNull TreasureHunt hunt, @NotNull Block block) {
         super(hunt, block);
     }
@@ -76,31 +76,19 @@ public class Chest extends Interactable {
                         + ChatColor.RESET + ChatColor.GREEN + "!");
         event.setCancelled(true);
     }
-    @Override
-    void onBlockBreak(BlockBreakEvent event) {
-        ItemStack item = getItem();
-        if (item == null) return;
-        Location location = block.getLocation();
-        World world = location.getWorld();
-        assert world != null;
-        world.dropItem(location, item);
-        try {
-            deleteItem();
-        } catch (IOException | InvalidConfigurationException e) {
-            Logger.logWarning("An error occurred while trying to handle an block break event:");
-        }
-    }
     private void setTexture() throws IllegalAccessException, NoSuchFieldException {
         block.setType(Material.PLAYER_HEAD, false);
         if (profile == null) {
-            profile = Bukkit.createPlayerProfile("ChestHead");
-            profile.getTextures().setSkin(skinURL);
+            profile = new GameProfile(UUID.randomUUID(), null);
+            profile.getProperties().put("textures", new Property("textures", texture));
         }
         Skull skull = (Skull) block.getState();
-        skull.setOwnerProfile(profile);
+        Field profileField = skull.getClass().getDeclaredField("profile");
+        profileField.setAccessible(true);
+        profileField.set(skull, profile);
         skull.update();
     }
-    private void setItem(@NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException {
+    private void setItem(@NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException, IllegalArgumentException {
         hunt.setItem(block.getLocation(), itemStack);
     }
     @Nullable
@@ -113,29 +101,30 @@ public class Chest extends Interactable {
     public boolean mark() {
         Inventory inventory = ((InventoryHolder) block.getState()).getInventory();
 
-        // Get first item in inventory
-        Optional<ItemStack> treasure = Arrays.stream(inventory.getContents()).filter(Objects::nonNull).findFirst();
-        if (treasure.isEmpty()) {
-            interactables.remove(this);
-            return false;
-        }
-        ItemStack item = treasure.get();
         Location location = block.getLocation();
         World world = location.getWorld();
         assert world != null;
 
-        // Drop all other items from inventory
+        // Get first item, Drop all other items from inventory
+        ItemStack item = null;
         boolean found = false;
         for (ItemStack i : inventory.getContents()) {
-            if (i != null && (found || !i.equals(item))) {
+            if (i == null) continue;
+            if (found) world.dropItem(location, i);
+            else {
                 found = true;
-                world.dropItem(location, i);
+                item = i;
             }
         }
+
+        if (item == null) return false;
 
         // Store item in chest NBT
         try {
             setItem(item);
+        } catch (IllegalArgumentException e) {
+            interactables.remove(this);
+            return false;
         } catch (IOException | InvalidConfigurationException e) {
             Logger.logWarning("An error occurred while storing item data:");
             e.printStackTrace();

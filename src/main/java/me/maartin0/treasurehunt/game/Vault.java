@@ -50,6 +50,7 @@ public class Vault extends Interactable {
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 meta.setLore(Collections.emptyList());
+                meta.setCustomModelData(null);
                 item.setItemMeta(meta);
             }
             Location location = player.getLocation();
