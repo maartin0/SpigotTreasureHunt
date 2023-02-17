@@ -4,9 +4,7 @@ import me.maartin0.treasurehunt.game.Chest;
 import me.maartin0.treasurehunt.game.TreasureHunt;
 import me.maartin0.treasurehunt.util.Command;
 import me.maartin0.treasurehunt.util.Logger;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -21,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,21 +31,20 @@ public class ManageCommand extends Command implements Listener {
     Map<UUID, Runnable> confirmSessions = new ConcurrentHashMap<>();
     final static String permission = "treasurehunt.manage";
     @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
+    public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         confirmSessions.remove(event.getPlayer().getUniqueId());
     }
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         confirmSessions.remove(event.getPlayer().getUniqueId());
     }
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull String commandName, @NotNull String[] args) {
         if (!sender.hasPermission(permission)) {
-            TreasureHunt hunt = TreasureHunt.get(args.length == 0 ? null : args[0]);
-            if (hunt == null) Logger.sendPlayerMessage(sender, "No treasure hunts available");
-            else this.scores(hunt, sender);
-        } if (args.length != 0 && args[0].equalsIgnoreCase("create")) {
-            create(args.length > 1 ? args[1] : null, sender);
+            TreasureHunt hunt = TreasureHunt.get();
+            this.scores(hunt, sender);
+        } else if (args.length != 0 && args[0].equalsIgnoreCase("create")) {
+            create(sender);
         } else if (args.length != 0 && args[0].equalsIgnoreCase("confirm")) {
             confirm(sender);
         } else {
@@ -57,15 +55,30 @@ public class ManageCommand extends Command implements Listener {
                             ? this::delete
                             : (args[0].equalsIgnoreCase("mark"))
                             ? this::mark
+                            : (args[0].equalsIgnoreCase("item"))
+                            ? this::item
                             : null;
             if (command == null) return false;
-            TreasureHunt hunt = TreasureHunt.get(args.length > 1 ? args[1] : null);
-            if (hunt == null) Logger.sendPlayerMessage(sender, "Create a hunt first with '/hunt create'!");
-            else command.accept(hunt, sender);
+            TreasureHunt hunt = TreasureHunt.get();
+            command.accept(hunt, sender);
         }
         return true;
     }
-    void create(@Nullable String name, @NotNull CommandSender sender) {
+    void item(@NotNull TreasureHunt hunt, @NotNull CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            Logger.sendPlayerMessage(sender, "You can only use this command as a player");
+            return;
+        }
+        Location location = player.getLocation();
+        World world = location.getWorld();
+        assert world != null;
+        try {
+            world.dropItem(location, Chest.getItemStack());
+        } catch (NoSuchFieldException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            Logger.sendPlayerGenericErrorMessage(sender);
+        }
+    }
+    void create(@NotNull CommandSender sender) {
         if (!(sender instanceof Player player)) {
             Logger.sendPlayerMessage(sender, "You can only use this command as a player");
             return;
@@ -77,7 +90,7 @@ public class ManageCommand extends Command implements Listener {
         }
         confirmSessions.put(player.getUniqueId(), () -> {
             try {
-                TreasureHunt.create(name, block);
+                TreasureHunt.create(block);
             } catch (IOException | InvalidConfigurationException e) {
                 Logger.sendPlayerGenericErrorMessage(player);
                 Logger.logWarning("An error occurred while trying to create a treasure hunt:");
@@ -106,7 +119,6 @@ public class ManageCommand extends Command implements Listener {
         });
         sendConfirmMessage(sender);
     }
-
     void scores(@NotNull TreasureHunt hunt, @NotNull CommandSender sender) {
         List<Map.Entry<UUID, Integer>> scores = hunt.getScores();
         scores.forEach((Map.Entry<UUID, Integer> entry) -> {
@@ -158,9 +170,7 @@ public class ManageCommand extends Command implements Listener {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender player, @NotNull String commandName, @NotNull String[] args) {
         if (args.length < 2 && player.hasPermission(permission))
-            return List.of("create", "delete", "scores", "mark", "confirm");
-        if (args.length < 3)
-            return TreasureHunt.getNames().stream().toList();
+            return List.of("create", "delete", "scores", "mark", "confirm", "item");
         return null;
     }
 }

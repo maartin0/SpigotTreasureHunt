@@ -12,24 +12,49 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.UUID;
 
 public class Chest extends Interactable {
     private final static String texture = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTM1YzE2NTUxYWYzOTI4MWQ4MzA3ODAwZjg1NGMxOGRiNTg3NDdhMWNiYjAxMTYyODY1OGZjYzI1NWExM2M3YyJ9fX0=";
+    private final static URL textureUrl;
+    static {
+        try {
+            textureUrl = new URL("https://textures.minecraft.net/texture/535c16551af39281d8307800f854c18db58747a1cbb011628658fcc255a13c7c");
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static GameProfile profile;
     public Chest(@NotNull TreasureHunt hunt, @NotNull Block block) {
         super(hunt, block);
     }
+    public static boolean isChest(Block block) {
+        Material type = block.getType();
+        if (type != Material.PLAYER_HEAD && type != Material.PLAYER_WALL_HEAD) return false;
+        Skull skull = (Skull) block.getState();
+        PlayerProfile profile1 = skull.getOwnerProfile();
+        if (profile1 == null) return false;
+        URL skinUrl = profile1.getTextures().getSkin();
+        if (skinUrl == null) return false;
+        return skinUrl.getPath().contains(textureUrl.getPath());
+    }
     @Override
     synchronized void onPlayerInteract(PlayerInteractEvent event) {
         ItemStack item = getItem();
-        if (item == null) return;
 
         // Play sound effect
         Player player = event.getPlayer();
@@ -54,7 +79,6 @@ public class Chest extends Interactable {
             Logger.logWarning("An error occurred while trying to handle an interact event:");
             e.printStackTrace();
         }
-        interactables.remove(this);
 
         // Send message to player
         Logger.sendPlayerMessage(player,
@@ -65,12 +89,26 @@ public class Chest extends Interactable {
                         + ChatColor.RESET + ChatColor.GREEN + "!");
         event.setCancelled(true);
     }
-    private void setTexture() throws IllegalAccessException, NoSuchFieldException {
-        block.setType(Material.PLAYER_HEAD, false);
+    public static ItemStack getItemStack() throws NoSuchFieldException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        ItemStack itemStack = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta itemMeta = Bukkit.getItemFactory().getItemMeta(Material.PLAYER_HEAD);
+        updateProfile();
+        assert itemMeta != null;
+        Method mtd = itemMeta.getClass().getDeclaredMethod("setProfile", GameProfile.class);
+        mtd.setAccessible(true);
+        mtd.invoke(itemMeta, profile);
+        itemStack.setItemMeta(itemMeta);
+        return itemStack;
+    }
+    private static void updateProfile() {
         if (profile == null) {
             profile = new GameProfile(UUID.randomUUID(), null);
             profile.getProperties().put("textures", new Property("textures", texture));
         }
+    }
+    private void setTexture() throws IllegalAccessException, NoSuchFieldException {
+        block.setType(Material.PLAYER_HEAD, false);
+        updateProfile();
         Skull skull = (Skull) block.getState();
         Field profileField = skull.getClass().getDeclaredField("profile");
         profileField.setAccessible(true);
@@ -80,7 +118,6 @@ public class Chest extends Interactable {
     private void setItem(@NotNull ItemStack itemStack) throws IOException, InvalidConfigurationException {
         hunt.setItem(block.getLocation(), itemStack);
     }
-    @Nullable
     private ItemStack getItem() {
         return hunt.getItem(block.getLocation());
     }
@@ -114,7 +151,6 @@ public class Chest extends Interactable {
         } catch (IOException | InvalidConfigurationException e) {
             Logger.logWarning("An error occurred while storing item data:");
             e.printStackTrace();
-            interactables.remove(this);
             return false;
         }
 
@@ -126,7 +162,6 @@ public class Chest extends Interactable {
         } catch (NoSuchFieldException | IllegalAccessException e) {
             Logger.logWarning("An error occurred while changing a blocks state:");
             e.printStackTrace();
-            interactables.remove(this);
             return false;
         }
 

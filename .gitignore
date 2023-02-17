@@ -92,6 +92,14 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
+# BuildTools
+Build*
+Bukkit*
+CraftBukkit*
+Spigot*
+apache-maven*
+work*
+
 # Windows shortcuts
 *.lnk
 

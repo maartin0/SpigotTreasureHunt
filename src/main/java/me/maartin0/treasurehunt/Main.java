@@ -16,7 +16,6 @@ public final class Main extends JavaPlugin {
         plugin = this;
         Bukkit.getPluginManager().registerEvents(new Interactable.InteractionListener(), this);
         new ManageCommand().register("hunt");
-        TreasureHunt.loadInteractables();
         Logger.logInfo("Ready!");
     }
 
